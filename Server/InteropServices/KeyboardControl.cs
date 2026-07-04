@@ -1,0 +1,192 @@
+﻿using System.Runtime.InteropServices;
+
+namespace Server.InteropServices
+{
+	public static class KeyboardControl
+	{
+		internal static class Imports
+		{
+			[StructLayout(LayoutKind.Sequential)]
+			internal struct INPUT
+			{
+				public int type;
+				public INPUTUNION u;
+			}
+
+			[StructLayout(LayoutKind.Explicit)]
+			internal struct INPUTUNION
+			{
+				[FieldOffset(0)]
+				public KEYBDINPUT ki;
+			}
+
+			[StructLayout(LayoutKind.Sequential)]
+			internal struct KEYBDINPUT
+			{
+				public ushort wVk;
+				public ushort wScan;
+				public uint dwFlags;
+				public uint time;
+				public IntPtr dwExtraInfo;
+			}
+
+			internal const int INPUT_KEYBOARD = 1;
+
+			internal const uint KEYEVENTF_KEYUP = 0x0002;
+			internal const uint KEYEVENTF_UNICODE = 0x0004;
+
+			[DllImport("user32.dll", SetLastError = true)]
+			internal static extern uint SendInput(
+				uint nInputs,
+				INPUT[] pInputs,
+				int cbSize);
+		}
+
+		/// <summary>
+		/// Simulates a key press (key down) for the specified virtual key code.
+		/// </summary>
+		/// <param name="virtualKeyCode"></param>
+		public static void KeyDown(ushort virtualKeyCode)
+		{
+			SendKeyboardInput(new Imports.KEYBDINPUT
+			{
+				wVk = virtualKeyCode,
+				dwFlags = 0
+			});
+		}
+
+		/// <summary>
+		/// Simulates a key release (key up) for the specified virtual key code.
+		/// </summary>
+		/// <param name="virtualKeyCode"></param>
+		public static void KeyUp(ushort virtualKeyCode)
+		{
+			SendKeyboardInput(new Imports.KEYBDINPUT
+			{
+				wVk = virtualKeyCode,
+				dwFlags = Imports.KEYEVENTF_KEYUP
+			});
+		}
+
+		/// <summary>
+		/// Simulates a key press (key down followed by key up) for the specified virtual key code.
+		/// </summary>
+		/// <param name="virtualKeyCode"></param>
+		public static void Press(ushort virtualKeyCode)
+		{
+			KeyDown(virtualKeyCode);
+			Thread.Sleep(25);
+			KeyUp(virtualKeyCode);
+		}
+
+		/// <summary>
+		/// Simulates a hotkey combination by pressing and releasing the specified virtual key codes in order.
+		/// </summary>
+		/// <param name="virtualKeyCodes"></param>
+		public static void Hotkey(params ushort[] virtualKeyCodes)
+		{
+			foreach (var key in virtualKeyCodes)
+			{
+				KeyDown(key);
+				Thread.Sleep(10);
+			}
+
+			for (var i = virtualKeyCodes.Length - 1; i >= 0; i--)
+			{
+				KeyUp(virtualKeyCodes[i]);
+				Thread.Sleep(10);
+			}
+		}
+
+		/// <summary>
+		/// Simulates typing a string of text by sending individual character inputs.
+		/// </summary>
+		/// <param name="text"></param>
+		public static void TypeText(string text)
+		{
+			foreach (var ch in text)
+			{
+				TypeChar(ch);
+			}
+		}
+
+		/// <summary>
+		/// Simulates typing a single character by sending a Unicode input event.
+		/// </summary>
+		/// <param name="character"></param>
+		public static void TypeChar(char character)
+		{
+			var inputs = new[]
+			{
+				new Imports.INPUT
+				{
+					type = Imports.INPUT_KEYBOARD,
+					u = new Imports.INPUTUNION
+					{
+						ki = new Imports.KEYBDINPUT
+						{
+							wVk = 0,
+							wScan = character,
+							dwFlags = Imports.KEYEVENTF_UNICODE
+						}
+					}
+				},
+				new Imports.INPUT
+				{
+					type = Imports.INPUT_KEYBOARD,
+					u = new Imports.INPUTUNION
+					{
+						ki = new Imports.KEYBDINPUT
+						{
+							wVk = 0,
+							wScan = character,
+							dwFlags = Imports.KEYEVENTF_UNICODE | Imports.KEYEVENTF_KEYUP
+						}
+					}
+				}
+			};
+
+			SendInputs(inputs);
+		}
+
+		/// <summary>
+		/// Sends a single keyboard input event using the Windows SendInput API.
+		/// </summary>
+		/// <param name="keyboardInput"></param>
+		private static void SendKeyboardInput(Imports.KEYBDINPUT keyboardInput)
+		{
+			var inputs = new[]
+			{
+				new Imports.INPUT
+				{
+					type = Imports.INPUT_KEYBOARD,
+					u = new Imports.INPUTUNION
+					{
+						ki = keyboardInput
+					}
+				}
+			};
+
+			SendInputs(inputs);
+		}
+
+		/// <summary>
+		/// Sends an array of input events using the Windows SendInput API and checks for errors.
+		/// </summary>
+		/// <param name="inputs"></param>
+		/// <exception cref="InvalidOperationException"></exception>
+		private static void SendInputs(Imports.INPUT[] inputs)
+		{
+			var sent = Imports.SendInput(
+				(uint)inputs.Length,
+				inputs,
+				Marshal.SizeOf<Imports.INPUT>());
+
+			if (sent != inputs.Length)
+			{
+				var error = Marshal.GetLastWin32Error();
+				throw new InvalidOperationException($"SendInput failed. Win32 error: {error}");
+			}
+		}
+	}
+}
