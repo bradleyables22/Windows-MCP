@@ -1,7 +1,13 @@
 namespace Server.InteropServices
 {
+	/// <summary>
+	/// Represents a point in virtual-screen coordinates.
+	/// </summary>
 	public readonly record struct ScreenPoint(int X, int Y);
 
+	/// <summary>
+	/// Represents a rectangle in virtual-screen coordinates.
+	/// </summary>
 	public readonly record struct ScreenRectangle(int X, int Y, int Width, int Height)
 	{
 		public int Left => X;

@@ -4,6 +4,9 @@ using System.Text;
 
 namespace Server.InteropServices
 {
+	/// <summary>
+	/// Describes a visible top-level window and its current state.
+	/// </summary>
 	public sealed record WindowSnapshot(
 		IntPtr Handle,
 		string Title,
@@ -15,6 +18,9 @@ namespace Server.InteropServices
 		bool IsMinimized,
 		bool IsMaximized);
 
+	/// <summary>
+	/// Provides native Windows top-level window discovery, focus, movement, resizing, and state operations.
+	/// </summary>
 	[SupportedOSPlatform("windows")]
 	public static class WindowControl
 	{
@@ -264,6 +270,23 @@ namespace Server.InteropServices
 		public static bool TrySetForegroundWindow(IntPtr handle)
 		{
 			return handle != IntPtr.Zero && Imports.SetForegroundWindow(handle);
+		}
+
+		public static WindowSnapshot FocusWindow(IntPtr handle)
+		{
+			if (handle == IntPtr.Zero)
+			{
+				throw new ArgumentException("Window handle cannot be zero.", nameof(handle));
+			}
+
+			RestoreIfMinimized(handle);
+
+			if (!Imports.SetForegroundWindow(handle))
+			{
+				throw new InvalidOperationException("SetForegroundWindow failed.");
+			}
+
+			return GetWindowSnapshot(handle);
 		}
 
 		public static WindowSnapshot GetWindowSnapshot(IntPtr handle)

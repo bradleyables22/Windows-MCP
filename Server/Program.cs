@@ -1,3 +1,5 @@
+using Server.Tools;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add the MCP services: the transport to use (http) and the tools to register.
@@ -10,7 +12,13 @@ builder.Services
 		// See https://csharp.sdk.modelcontextprotocol.io/concepts/transports/transports.html for details.
 		options.Stateless = true;
 	})
-	.WithTools<RandomNumberTools>();
+	.WithTools<MouseTools>()
+	.WithTools<KeyboardTools>()
+	.WithTools<ScreenTools>()
+	.WithTools<WindowTools>()
+	.WithTools<ClipboardTools>()
+	.WithTools<ProcessTools>()
+	.WithTools<WaitTools>();
 
 var app = builder.Build();
 app.MapMcp();

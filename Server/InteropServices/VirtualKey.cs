@@ -1,5 +1,8 @@
 namespace Server.InteropServices
 {
+	/// <summary>
+	/// Defines common Windows virtual-key codes for keyboard input.
+	/// </summary>
 	public enum VirtualKey : ushort
 	{
 		Backspace = 0x08,

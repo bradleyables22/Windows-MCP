@@ -5,12 +5,18 @@ using System.Runtime.Versioning;
 
 namespace Server.InteropServices
 {
+	/// <summary>
+	/// Describes a display monitor and its usable working area.
+	/// </summary>
 	public sealed record DisplayMonitor(
 		string DeviceName,
 		ScreenRectangle Bounds,
 		ScreenRectangle WorkingArea,
 		bool IsPrimary);
 
+	/// <summary>
+	/// Contains an in-memory PNG screen capture and its capture metadata.
+	/// </summary>
 	public sealed record ScreenCaptureResult(
 		byte[] Bytes,
 		string MimeType,
@@ -20,6 +26,9 @@ namespace Server.InteropServices
 		bool CursorIncluded,
 		DateTimeOffset CapturedAt);
 
+	/// <summary>
+	/// Provides native Windows monitor discovery and screen capture operations.
+	/// </summary>
 	[SupportedOSPlatform("windows")]
 	public static class ScreenControl
 	{

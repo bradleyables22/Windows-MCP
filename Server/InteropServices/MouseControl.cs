@@ -3,6 +3,9 @@ using System.Runtime.Versioning;
 
 namespace Server.InteropServices
 {
+	/// <summary>
+	/// Provides native Windows mouse movement, click, scroll, and drag operations.
+	/// </summary>
 	[SupportedOSPlatform("windows")]
 	public static class MouseControl
 	{
@@ -139,17 +142,42 @@ namespace Server.InteropServices
 		/// </summary>
 		public static void Click(MouseButton button)
 		{
-			switch (button)
+			MouseDown(button);
+			MouseUp(button);
+		}
+
+		/// <summary>
+		/// Simulates a double-click at the current cursor position.
+		/// </summary>
+		public static void DoubleClick(MouseButton button = MouseButton.Left, int delayMilliseconds = 75)
+		{
+			if (delayMilliseconds < 0)
 			{
-				case MouseButton.Left:
-					LeftClick();
-					break;
-				case MouseButton.Right:
-					RightClick();
-					break;
-				default:
-					throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported mouse button.");
+				throw new ArgumentOutOfRangeException(
+					nameof(delayMilliseconds),
+					delayMilliseconds,
+					"Delay cannot be negative.");
 			}
+
+			Click(button);
+			Thread.Sleep(delayMilliseconds);
+			Click(button);
+		}
+
+		/// <summary>
+		/// Simulates a mouse button press at the current cursor position.
+		/// </summary>
+		public static void MouseDown(MouseButton button)
+		{
+			MouseDown(GetMouseDownFlag(button));
+		}
+
+		/// <summary>
+		/// Simulates a mouse button release at the current cursor position.
+		/// </summary>
+		public static void MouseUp(MouseButton button)
+		{
+			MouseUp(GetMouseUpFlag(button));
 		}
 
 		/// <summary>
@@ -179,6 +207,71 @@ namespace Server.InteropServices
 		}
 
 		/// <summary>
+		/// Drags from the current cursor position to the specified screen coordinates.
+		/// </summary>
+		public static void DragTo(
+			int x,
+			int y,
+			MouseButton button = MouseButton.Left,
+			int steps = 20,
+			int stepDelayMilliseconds = 10)
+		{
+			var start = GetPosition();
+			DragFromTo(start.X, start.Y, x, y, button, steps, stepDelayMilliseconds);
+		}
+
+		/// <summary>
+		/// Drags from one screen coordinate to another.
+		/// </summary>
+		public static void DragFromTo(
+			int startX,
+			int startY,
+			int endX,
+			int endY,
+			MouseButton button = MouseButton.Left,
+			int steps = 20,
+			int stepDelayMilliseconds = 10)
+		{
+			if (steps <= 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(steps), steps, "Drag steps must be positive.");
+			}
+
+			if (stepDelayMilliseconds < 0)
+			{
+				throw new ArgumentOutOfRangeException(
+					nameof(stepDelayMilliseconds),
+					stepDelayMilliseconds,
+					"Step delay cannot be negative.");
+			}
+
+			MoveToChecked(startX, startY);
+			Thread.Sleep(50);
+			MouseDown(button);
+
+			try
+			{
+				for (var step = 1; step <= steps; step++)
+				{
+					var progress = (double)step / steps;
+					var nextX = startX + (int)Math.Round((endX - startX) * progress);
+					var nextY = startY + (int)Math.Round((endY - startY) * progress);
+
+					MoveToChecked(nextX, nextY);
+
+					if (stepDelayMilliseconds > 0)
+					{
+						Thread.Sleep(stepDelayMilliseconds);
+					}
+				}
+			}
+			finally
+			{
+				MouseUp(button);
+			}
+		}
+
+		/// <summary>
 		/// Simulates mouse wheel scrolling. Positive values scroll up, negative values scroll down.
 		/// </summary>
 		public static void Scroll(int amount)
@@ -204,6 +297,26 @@ namespace Server.InteropServices
 			{
 				dwFlags = flag
 			});
+		}
+
+		private static uint GetMouseDownFlag(MouseButton button)
+		{
+			return button switch
+			{
+				MouseButton.Left => Imports.MOUSEEVENTF_LEFTDOWN,
+				MouseButton.Right => Imports.MOUSEEVENTF_RIGHTDOWN,
+				_ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported mouse button.")
+			};
+		}
+
+		private static uint GetMouseUpFlag(MouseButton button)
+		{
+			return button switch
+			{
+				MouseButton.Left => Imports.MOUSEEVENTF_LEFTUP,
+				MouseButton.Right => Imports.MOUSEEVENTF_RIGHTUP,
+				_ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported mouse button.")
+			};
 		}
 
 		private static void SendMouseInput(Imports.MOUSEINPUT mouseInput)

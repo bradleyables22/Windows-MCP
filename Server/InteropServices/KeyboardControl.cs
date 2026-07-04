@@ -3,6 +3,9 @@ using System.Runtime.Versioning;
 
 namespace Server.InteropServices
 {
+	/// <summary>
+	/// Provides native Windows keyboard input, hotkey, and Unicode text typing operations.
+	/// </summary>
 	[SupportedOSPlatform("windows")]
 	public static class KeyboardControl
 	{
