@@ -1,7 +1,9 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace Server.InteropServices
 {
+	[SupportedOSPlatform("windows")]
 	public static class MouseControl
 	{
 		internal static class Imports
@@ -39,10 +41,10 @@ namespace Server.InteropServices
 			internal const uint MOUSEEVENTF_RIGHTUP = 0x0010;
 			internal const uint MOUSEEVENTF_WHEEL = 0x0800;
 
-			[DllImport("user32.dll")]
+			[DllImport("user32.dll", SetLastError = true)]
 			internal static extern bool SetCursorPos(int x, int y);
 
-			[DllImport("user32.dll")]
+			[DllImport("user32.dll", SetLastError = true)]
 			internal static extern bool GetCursorPos(out POINT point);
 
 			[DllImport("user32.dll", SetLastError = true)]
@@ -52,22 +54,66 @@ namespace Server.InteropServices
 		/// <summary>
 		/// Gets the current position of the mouse cursor.
 		/// </summary>
-		/// <returns></returns>
 		public static (int X, int Y) Get()
 		{
-			Imports.GetCursorPos(out var point);
+			var point = GetPosition();
 			return (point.X, point.Y);
+		}
+
+		/// <summary>
+		/// Gets the current position of the mouse cursor.
+		/// </summary>
+		public static ScreenPoint GetPosition()
+		{
+			if (!Imports.GetCursorPos(out var point))
+			{
+				ThrowLastWin32Error("GetCursorPos failed");
+			}
+
+			return new ScreenPoint(point.X, point.Y);
 		}
 
 		/// <summary>
 		/// Moves the mouse cursor to the specified screen coordinates.
 		/// </summary>
-		/// <param name="x"></param>
-		/// <param name="y"></param>
-		/// <returns></returns>
 		public static bool MoveTo(int x, int y)
 		{
 			return Imports.SetCursorPos(x, y);
+		}
+
+		/// <summary>
+		/// Moves the mouse cursor to the specified screen coordinates.
+		/// </summary>
+		public static bool MoveTo(ScreenPoint point)
+		{
+			return MoveTo(point.X, point.Y);
+		}
+
+		/// <summary>
+		/// Moves the mouse cursor only when the target point is inside the virtual screen.
+		/// </summary>
+		public static void MoveToChecked(int x, int y)
+		{
+			if (!ScreenControl.IsPointOnScreen(x, y))
+			{
+				throw new ArgumentOutOfRangeException(
+					nameof(x),
+					new ScreenPoint(x, y),
+					"Mouse coordinates must be inside the virtual screen bounds.");
+			}
+
+			if (!MoveTo(x, y))
+			{
+				ThrowLastWin32Error("SetCursorPos failed");
+			}
+		}
+
+		/// <summary>
+		/// Moves the mouse cursor only when the target point is inside the virtual screen.
+		/// </summary>
+		public static void MoveToChecked(ScreenPoint point)
+		{
+			MoveToChecked(point.X, point.Y);
 		}
 
 		/// <summary>
@@ -89,33 +135,52 @@ namespace Server.InteropServices
 		}
 
 		/// <summary>
+		/// Simulates a mouse button click at the current cursor position.
+		/// </summary>
+		public static void Click(MouseButton button)
+		{
+			switch (button)
+			{
+				case MouseButton.Left:
+					LeftClick();
+					break;
+				case MouseButton.Right:
+					RightClick();
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported mouse button.");
+			}
+		}
+
+		/// <summary>
 		/// Moves the mouse cursor to the specified screen coordinates and simulates a left mouse button click.
 		/// </summary>
-		/// <param name="x"></param>
-		/// <param name="y"></param>
 		public static void LeftClickAt(int x, int y)
 		{
-			MoveTo(x, y);
-			Thread.Sleep(50);
-			LeftClick();
+			ClickAt(MouseButton.Left, x, y);
 		}
 
 		/// <summary>
 		/// Moves the mouse cursor to the specified screen coordinates and simulates a right mouse button click.
 		/// </summary>
-		/// <param name="x"></param>
-		/// <param name="y"></param>
 		public static void RightClickAt(int x, int y)
 		{
-			MoveTo(x, y);
+			ClickAt(MouseButton.Right, x, y);
+		}
+
+		/// <summary>
+		/// Moves the mouse cursor to the specified screen coordinates and simulates a mouse button click.
+		/// </summary>
+		public static void ClickAt(MouseButton button, int x, int y)
+		{
+			MoveToChecked(x, y);
 			Thread.Sleep(50);
-			RightClick();
+			Click(button);
 		}
 
 		/// <summary>
 		/// Simulates mouse wheel scrolling. Positive values scroll up, negative values scroll down.
 		/// </summary>
-		/// <param name="amount"></param>
 		public static void Scroll(int amount)
 		{
 			SendMouseInput(new Imports.MOUSEINPUT
@@ -125,10 +190,6 @@ namespace Server.InteropServices
 			});
 		}
 
-		/// <summary>
-		/// Simulates a mouse button press.
-		/// </summary>
-		/// <param name="flag"></param>
 		private static void MouseDown(uint flag)
 		{
 			SendMouseInput(new Imports.MOUSEINPUT
@@ -137,10 +198,6 @@ namespace Server.InteropServices
 			});
 		}
 
-		/// <summary>
-		/// Simulates a mouse button release.
-		/// </summary>
-		/// <param name="flag"></param>
 		private static void MouseUp(uint flag)
 		{
 			SendMouseInput(new Imports.MOUSEINPUT
@@ -149,11 +206,6 @@ namespace Server.InteropServices
 			});
 		}
 
-		/// <summary>
-		/// Sends mouse input to the system using the SendInput function.
-		/// </summary>
-		/// <param name="mouseInput"></param>
-		/// <exception cref="InvalidOperationException"></exception>
 		private static void SendMouseInput(Imports.MOUSEINPUT mouseInput)
 		{
 			var inputs = new[]
@@ -172,9 +224,13 @@ namespace Server.InteropServices
 
 			if (sent != inputs.Length)
 			{
-				var error = Marshal.GetLastWin32Error();
-				throw new InvalidOperationException($"SendInput failed. Win32 error: {error}");
+				ThrowLastWin32Error("SendInput failed");
 			}
+		}
+
+		private static void ThrowLastWin32Error(string message)
+		{
+			throw new InvalidOperationException($"{message}. Win32 error: {Marshal.GetLastWin32Error()}");
 		}
 	}
 }

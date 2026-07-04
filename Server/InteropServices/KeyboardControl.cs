@@ -1,7 +1,9 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace Server.InteropServices
 {
+	[SupportedOSPlatform("windows")]
 	public static class KeyboardControl
 	{
 		internal static class Imports
@@ -45,7 +47,6 @@ namespace Server.InteropServices
 		/// <summary>
 		/// Simulates a key press (key down) for the specified virtual key code.
 		/// </summary>
-		/// <param name="virtualKeyCode"></param>
 		public static void KeyDown(ushort virtualKeyCode)
 		{
 			SendKeyboardInput(new Imports.KEYBDINPUT
@@ -56,9 +57,16 @@ namespace Server.InteropServices
 		}
 
 		/// <summary>
+		/// Simulates a key press (key down) for the specified virtual key.
+		/// </summary>
+		public static void KeyDown(VirtualKey key)
+		{
+			KeyDown((ushort)key);
+		}
+
+		/// <summary>
 		/// Simulates a key release (key up) for the specified virtual key code.
 		/// </summary>
-		/// <param name="virtualKeyCode"></param>
 		public static void KeyUp(ushort virtualKeyCode)
 		{
 			SendKeyboardInput(new Imports.KEYBDINPUT
@@ -69,9 +77,16 @@ namespace Server.InteropServices
 		}
 
 		/// <summary>
+		/// Simulates a key release (key up) for the specified virtual key.
+		/// </summary>
+		public static void KeyUp(VirtualKey key)
+		{
+			KeyUp((ushort)key);
+		}
+
+		/// <summary>
 		/// Simulates a key press (key down followed by key up) for the specified virtual key code.
 		/// </summary>
-		/// <param name="virtualKeyCode"></param>
 		public static void Press(ushort virtualKeyCode)
 		{
 			KeyDown(virtualKeyCode);
@@ -80,9 +95,16 @@ namespace Server.InteropServices
 		}
 
 		/// <summary>
+		/// Simulates a key press (key down followed by key up) for the specified virtual key.
+		/// </summary>
+		public static void Press(VirtualKey key)
+		{
+			Press((ushort)key);
+		}
+
+		/// <summary>
 		/// Simulates a hotkey combination by pressing and releasing the specified virtual key codes in order.
 		/// </summary>
-		/// <param name="virtualKeyCodes"></param>
 		public static void Hotkey(params ushort[] virtualKeyCodes)
 		{
 			foreach (var key in virtualKeyCodes)
@@ -99,11 +121,20 @@ namespace Server.InteropServices
 		}
 
 		/// <summary>
-		/// Simulates typing a string of text by sending individual character inputs.
+		/// Simulates a hotkey combination by pressing and releasing the specified virtual keys in order.
 		/// </summary>
-		/// <param name="text"></param>
+		public static void Hotkey(params VirtualKey[] keys)
+		{
+			Hotkey(keys.Select(key => (ushort)key).ToArray());
+		}
+
+		/// <summary>
+		/// Simulates typing a string of text by sending individual Unicode input events.
+		/// </summary>
 		public static void TypeText(string text)
 		{
+			ArgumentNullException.ThrowIfNull(text);
+
 			foreach (var ch in text)
 			{
 				TypeChar(ch);
@@ -113,7 +144,6 @@ namespace Server.InteropServices
 		/// <summary>
 		/// Simulates typing a single character by sending a Unicode input event.
 		/// </summary>
-		/// <param name="character"></param>
 		public static void TypeChar(char character)
 		{
 			var inputs = new[]
@@ -149,10 +179,6 @@ namespace Server.InteropServices
 			SendInputs(inputs);
 		}
 
-		/// <summary>
-		/// Sends a single keyboard input event using the Windows SendInput API.
-		/// </summary>
-		/// <param name="keyboardInput"></param>
 		private static void SendKeyboardInput(Imports.KEYBDINPUT keyboardInput)
 		{
 			var inputs = new[]
@@ -170,11 +196,6 @@ namespace Server.InteropServices
 			SendInputs(inputs);
 		}
 
-		/// <summary>
-		/// Sends an array of input events using the Windows SendInput API and checks for errors.
-		/// </summary>
-		/// <param name="inputs"></param>
-		/// <exception cref="InvalidOperationException"></exception>
 		private static void SendInputs(Imports.INPUT[] inputs)
 		{
 			var sent = Imports.SendInput(
@@ -184,9 +205,13 @@ namespace Server.InteropServices
 
 			if (sent != inputs.Length)
 			{
-				var error = Marshal.GetLastWin32Error();
-				throw new InvalidOperationException($"SendInput failed. Win32 error: {error}");
+				ThrowLastWin32Error("SendInput failed");
 			}
+		}
+
+		private static void ThrowLastWin32Error(string message)
+		{
+			throw new InvalidOperationException($"{message}. Win32 error: {Marshal.GetLastWin32Error()}");
 		}
 	}
 }
