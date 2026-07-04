@@ -22,7 +22,21 @@ namespace Server.InteropServices
 			internal struct INPUTUNION
 			{
 				[FieldOffset(0)]
+				public MOUSEINPUT mi;
+
+				[FieldOffset(0)]
 				public KEYBDINPUT ki;
+			}
+
+			[StructLayout(LayoutKind.Sequential)]
+			internal struct MOUSEINPUT
+			{
+				public int dx;
+				public int dy;
+				public uint mouseData;
+				public uint dwFlags;
+				public uint time;
+				public IntPtr dwExtraInfo;
 			}
 
 			[StructLayout(LayoutKind.Sequential)]
@@ -138,9 +152,27 @@ namespace Server.InteropServices
 		{
 			ArgumentNullException.ThrowIfNull(text);
 
-			foreach (var ch in text)
+			var hadClipboardText = ClipboardControl.ContainsText();
+			var previousClipboardText = hadClipboardText ? ClipboardControl.GetText() : null;
+
+			try
 			{
-				TypeChar(ch);
+				// Clipboard paste is more reliable than KEYEVENTF_UNICODE across modern text controls.
+				ClipboardControl.SetText(text);
+				Thread.Sleep(25);
+				Hotkey(VirtualKey.Control, VirtualKey.V);
+				Thread.Sleep(150);
+			}
+			finally
+			{
+				if (hadClipboardText)
+				{
+					ClipboardControl.SetText(previousClipboardText ?? string.Empty);
+				}
+				else
+				{
+					ClipboardControl.Clear();
+				}
 			}
 		}
 
