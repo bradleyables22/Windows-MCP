@@ -1,3 +1,4 @@
+using Server.Resources;
 using Server.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,10 +19,10 @@ builder.Services
 	.WithTools<WindowTools>()
 	.WithTools<ClipboardTools>()
 	.WithTools<ProcessTools>()
-	.WithTools<WaitTools>();
+	.WithTools<WaitTools>()
+	.WithTools<HtmlTools>()
+	.WithResources<HtmlResources>();
 
 var app = builder.Build();
-app.MapMcp();
-app.UseHttpsRedirection();
-
+app.MapMcp("mcp");
 app.Run();
