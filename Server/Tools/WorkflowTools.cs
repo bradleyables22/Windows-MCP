@@ -9,16 +9,16 @@ namespace Server.Tools
 	public sealed class WorkflowTools
 	{
 		private readonly WorkflowStore workflowStore;
-		private readonly WorkflowJobService workflowJobService;
+		private readonly WorkflowRunner workflowRunner;
 		private readonly WorkflowToolDispatcher workflowToolDispatcher;
 
 		public WorkflowTools(
 			WorkflowStore workflowStore,
-			WorkflowJobService workflowJobService,
+			WorkflowRunner workflowRunner,
 			WorkflowToolDispatcher workflowToolDispatcher)
 		{
 			this.workflowStore = workflowStore;
-			this.workflowJobService = workflowJobService;
+			this.workflowRunner = workflowRunner;
 			this.workflowToolDispatcher = workflowToolDispatcher;
 		}
 
@@ -88,58 +88,23 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Queues a saved workflow to run in the background and returns its job ID.")]
-		public WorkflowJobInfo RunWorkflow(
+		[Description("Runs a saved workflow synchronously and returns the completed step results.")]
+		public WorkflowRunInfo RunWorkflow(
 			[Description("Saved workflow name.")] string name,
 			[Description("Optional JSON object containing workflow argument values.")] string? argumentsJson = null)
 		{
 			var workflow = workflowStore.GetWorkflow(name);
-			return workflowJobService.EnqueueWorkflow(workflow, argumentsJson);
+			return workflowRunner.RunWorkflow(workflow, argumentsJson);
 		}
 
 		[McpServerTool]
-		[Description("Queues inline workflow JSON to run in the background and returns its job ID.")]
-		public WorkflowJobInfo RunWorkflowJson(
+		[Description("Runs inline workflow JSON synchronously and returns the completed step results.")]
+		public WorkflowRunInfo RunWorkflowJson(
 			[Description("Workflow JSON with description, optional parameters, and steps.")] string workflowJson,
 			[Description("Optional JSON object containing workflow argument values.")] string? argumentsJson = null)
 		{
 			var workflow = workflowStore.ParseWorkflow(null, workflowJson);
-			return workflowJobService.EnqueueWorkflow(workflow, argumentsJson);
-		}
-
-		[McpServerTool]
-		[Description("Lists workflow jobs from this server process.")]
-		public IReadOnlyList<WorkflowJobInfo> ListWorkflowJobs()
-		{
-			return workflowJobService.ListJobs();
-		}
-
-		[McpServerTool]
-		[Description("Gets workflow job status and completed step results by job ID.")]
-		public WorkflowJobInfo GetWorkflowJob(
-			[Description("Workflow job ID returned by RunWorkflow or RunWorkflowJson.")] string jobId)
-		{
-			return workflowJobService.GetJob(jobId);
-		}
-
-		[McpServerTool]
-		[Description("Polls until a workflow job completes or the timeout elapses.")]
-		public WaitInfo<WorkflowJobInfo> WaitForWorkflowJob(
-			[Description("Workflow job ID returned by RunWorkflow or RunWorkflowJson.")] string jobId,
-			[Description("Maximum wait time in milliseconds.")] int timeoutMilliseconds,
-			[Description("Polling interval in milliseconds.")] int pollIntervalMilliseconds = 100)
-		{
-			var wait = workflowJobService.WaitForCompletion(
-				jobId,
-				ToolParsing.ToTimeout(timeoutMilliseconds, nameof(timeoutMilliseconds)),
-				ToolParsing.ToPollInterval(pollIntervalMilliseconds, nameof(pollIntervalMilliseconds)));
-
-			return new WaitInfo<WorkflowJobInfo>(
-				wait.Succeeded,
-				wait.Job,
-				wait.Elapsed.TotalMilliseconds,
-				wait.Attempts,
-				wait.Message);
+			return workflowRunner.RunWorkflow(workflow, argumentsJson);
 		}
 	}
 }

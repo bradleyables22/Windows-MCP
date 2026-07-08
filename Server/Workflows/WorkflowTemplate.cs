@@ -21,7 +21,7 @@ namespace Server.Workflows
 
 		public static IReadOnlyDictionary<string, JsonElement> CreateVariables(
 			IReadOnlyDictionary<string, JsonElement> arguments,
-			string jobId)
+			string runId)
 		{
 			var variables = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
 
@@ -30,7 +30,9 @@ namespace Server.Workflows
 				variables[key] = value.Clone();
 			}
 
-			variables["jobId"] = JsonSerializer.SerializeToElement(jobId, WorkflowJson.Options);
+			var runIdElement = JsonSerializer.SerializeToElement(runId, WorkflowJson.Options);
+			variables["runId"] = runIdElement;
+			variables["jobId"] = runIdElement;
 			return variables;
 		}
 

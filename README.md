@@ -11,7 +11,7 @@ It exposes tools for:
 - Clipboard text read, write, and clear
 - Process discovery, launch, focus, shell open, and graceful close
 - Polling waits for windows, processes, clipboard text, and screen changes
-- Named workflows stored as JSON and executed as background jobs
+- Named workflows stored as JSON and executed as synchronous runs
 
 ## Transport
 
@@ -76,13 +76,10 @@ The workflow MCP surface supports the full lifecycle:
 - `update_workflow`: updates a workflow and fails if it does not exist
 - `save_workflow`: creates or replaces a workflow
 - `delete_workflow`: deletes a workflow by name
-- `run_workflow`: queues a saved workflow by name
-- `run_workflow_json`: queues inline workflow JSON without saving it
-- `list_workflow_jobs`: lists jobs from the current server process
-- `get_workflow_job`: gets status and step results for a job ID
-- `wait_for_workflow_job`: waits until a job completes or times out
+- `run_workflow`: runs a saved workflow by name and returns completed step results
+- `run_workflow_json`: runs inline workflow JSON without saving it
 
-`run_workflow` and `run_workflow_json` return immediately with a `jobId`. The hosted workflow service runs queued jobs in the background and logs completion to stderr. Clients can use the returned job ID with `get_workflow_job` or `wait_for_workflow_job`.
+`run_workflow` and `run_workflow_json` are synchronous. Each call runs the workflow to completion and returns a run result containing the final status and per-step outputs.
 
 ### Workflow JSON
 
@@ -162,27 +159,24 @@ Exact placeholders preserve JSON types. For example, if `timeoutMilliseconds` is
 }
 ```
 
-The runner also provides a built-in `{{jobId}}` variable.
+The runner also provides a built-in `{{runId}}` variable. `{{jobId}}` is accepted as a compatibility alias.
 
-### Jobs
+### Run Results
 
-Workflow jobs are tracked in memory for the current server process. A job can have one of these statuses:
+A workflow run can have one of these statuses:
 
-- `queued`
-- `running`
 - `succeeded`
 - `failed`
-- `canceled`
 
-Each completed step records its index, tool name, status, start and completion timestamps, elapsed time, result JSON preview, result JSON length, and any error message.
+Each completed step records its index, tool name, status, start and completion timestamps, elapsed time, result JSON preview, result JSON length, and any error message. If a step fails, the run stops and returns a `failed` result with the failed step details.
 
-Desktop automation jobs are executed one at a time. This avoids overlapping mouse, keyboard, focus, and window operations.
+Desktop workflow runs are executed one at a time. This avoids overlapping mouse, keyboard, focus, and window operations.
 
 ### Implementation Notes
 
 The workflow layer is built on top of the existing tool classes rather than a separate automation API. The dispatcher reflects over the existing MCP tool methods and lets workflow steps call those same tools by name.
 
-The workflow runner does not write unsolicited completion messages to stdout, because stdout is reserved for MCP JSON-RPC traffic. Completion is reported through stderr logging and through `get_workflow_job` / `wait_for_workflow_job`.
+The workflow runner does not write unsolicited completion messages to stdout, because stdout is reserved for MCP JSON-RPC traffic. Completion is returned directly from `run_workflow` or `run_workflow_json`, and high-level run status is also logged to stderr.
 
 ## Notes
 

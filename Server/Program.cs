@@ -15,8 +15,7 @@ builder.Logging.AddConsole(options =>
 
 builder.Services.AddSingleton<WorkflowStore>();
 builder.Services.AddSingleton<WorkflowToolDispatcher>();
-builder.Services.AddSingleton<WorkflowJobService>();
-builder.Services.AddHostedService(provider => provider.GetRequiredService<WorkflowJobService>());
+builder.Services.AddSingleton<WorkflowRunner>();
 
 // Add the MCP services: the transport to use (stdio) and the tools to register.
 builder.Services
