@@ -1,19 +1,21 @@
-using ModelContextProtocol.Extensions.Apps;
-using Server.Resources;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Server.Tools;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = Host.CreateApplicationBuilder(args);
 
-// Add the MCP services: the transport to use (http) and the tools to register.
+// stdout is reserved for the JSON-RPC protocol on the stdio transport,
+// so all logging must be routed to stderr to avoid corrupting messages.
+builder.Logging.AddConsole(options =>
+{
+	options.LogToStandardErrorThreshold = LogLevel.Trace;
+});
+
+// Add the MCP services: the transport to use (stdio) and the tools to register.
 builder.Services
 	.AddMcpServer()
-	.WithHttpTransport(options =>
-	{
-		// Stateless mode is recommended for servers that don't need
-		// server-to-client requests like sampling or elicitation.
-		// See https://csharp.sdk.modelcontextprotocol.io/concepts/transports/transports.html for details.
-		options.Stateless = true;
-	})
+	.WithStdioServerTransport()
 	.WithTools<MouseTools>()
 	.WithTools<KeyboardTools>()
 	.WithTools<ScreenTools>()
@@ -21,11 +23,6 @@ builder.Services
 	.WithTools<ClipboardTools>()
 	.WithTools<ProcessTools>()
 	.WithTools<WaitTools>()
-	.WithTools<HtmlTools>()
-	.WithResources<HtmlResources>()
-	.WithMcpApps()
 	;
 
-var app = builder.Build();
-app.MapMcp("mcp");
-app.Run();
+await builder.Build().RunAsync();
