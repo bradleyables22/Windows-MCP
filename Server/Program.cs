@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Server.Tools;
+using Server.Workflows;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -11,6 +12,11 @@ builder.Logging.AddConsole(options =>
 {
 	options.LogToStandardErrorThreshold = LogLevel.Trace;
 });
+
+builder.Services.AddSingleton<WorkflowStore>();
+builder.Services.AddSingleton<WorkflowToolDispatcher>();
+builder.Services.AddSingleton<WorkflowJobService>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<WorkflowJobService>());
 
 // Add the MCP services: the transport to use (stdio) and the tools to register.
 builder.Services
@@ -23,6 +29,7 @@ builder.Services
 	.WithTools<ClipboardTools>()
 	.WithTools<ProcessTools>()
 	.WithTools<WaitTools>()
+	.WithTools<WorkflowTools>()
 	;
 
 await builder.Build().RunAsync();
