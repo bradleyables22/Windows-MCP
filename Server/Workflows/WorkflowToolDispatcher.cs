@@ -28,7 +28,12 @@ namespace Server.Workflows
 			typeof(WindowTools),
 			typeof(ClipboardTools),
 			typeof(ProcessTools),
-			typeof(WaitTools)
+			typeof(WaitTools),
+			typeof(CommandTools),
+			typeof(FileSystemTools),
+			typeof(RegistryTools),
+			typeof(EnvironmentTools),
+			typeof(ServiceTools)
 		];
 
 		private readonly IReadOnlyDictionary<string, ToolMethodInvoker> tools;

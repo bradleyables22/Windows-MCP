@@ -29,6 +29,11 @@ builder.Services
 	.WithTools<ProcessTools>()
 	.WithTools<WaitTools>()
 	.WithTools<WorkflowTools>()
+	.WithTools<CommandTools>()
+	.WithTools<FileSystemTools>()
+	.WithTools<RegistryTools>()
+	.WithTools<EnvironmentTools>()
+	.WithTools<ServiceTools>()
 	;
 
 await builder.Build().RunAsync();

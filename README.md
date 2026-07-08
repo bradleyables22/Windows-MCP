@@ -12,6 +12,7 @@ It exposes tools for:
 - Process discovery, launch, focus, shell open, and graceful close
 - Polling waits for windows, processes, clipboard text, and screen changes
 - Named workflows stored as JSON and executed as synchronous runs
+- Local system helpers for commands, files, registry, environment variables, and Windows services
 
 ## Transport
 
@@ -177,6 +178,76 @@ Desktop workflow runs are executed one at a time. This avoids overlapping mouse,
 The workflow layer is built on top of the existing tool classes rather than a separate automation API. The dispatcher reflects over the existing MCP tool methods and lets workflow steps call those same tools by name.
 
 The workflow runner does not write unsolicited completion messages to stdout, because stdout is reserved for MCP JSON-RPC traffic. Completion is returned directly from `run_workflow` or `run_workflow_json`, and high-level run status is also logged to stderr.
+
+## System Helpers
+
+The server also exposes local system access tools. These tools return structured results instead of printing to stdout.
+
+### Commands
+
+- `run_command`: runs an executable with optional arguments, working directory, timeout, and environment overrides
+- `run_shell_command`: runs a command line through `cmd.exe /d /s /c`
+- `run_power_shell`: runs Windows PowerShell, or `pwsh.exe` when requested
+
+Command results include:
+
+- executable name
+- arguments
+- working directory
+- exit code
+- timeout state
+- elapsed milliseconds
+- stdout
+- stderr
+
+### Files And Directories
+
+- `read_text_file`: reads text with a configurable encoding and maximum byte count
+- `write_text_file`: writes or appends text and can create parent directories
+- `read_file_base64`: reads binary data as base64
+- `write_file_base64`: writes or appends base64 data
+- `list_directory`: lists files and directories with optional pattern, recursion, hidden entries, and max-entry limit
+- `get_file_system_info`: returns file or directory metadata
+- `create_directory`: creates a directory and any missing parent directories
+- `delete_file`: permanently deletes a file
+- `recycle_file`: sends a file to the Windows Recycle Bin
+- `delete_directory`: permanently deletes a directory, optionally recursively
+- `recycle_directory`: sends a directory to the Windows Recycle Bin
+- `move_file`: moves or renames a file
+- `move_directory`: moves or renames a directory
+- `copy_file`: copies a file
+- `copy_directory`: copies a directory and all of its contents
+- `empty_directory`: removes everything inside a directory while keeping the directory itself
+- `paste_file_system_item`: copies or moves a file or directory into another directory, preserving the item name unless a new name is provided
+
+### Registry
+
+- `get_registry_value`: reads a registry value
+- `set_registry_value`: creates or updates a registry value
+- `list_registry_values`: lists values under a key
+- `list_registry_sub_keys`: lists subkeys under a key
+
+Registry hives accept `HKCU`, `HKLM`, `HKCR`, `HKU`, and `HKCC`, plus full names such as `HKEY_CURRENT_USER`. Registry views accept `default`, `registry64`, and `registry32`.
+
+Supported value kinds are `String`, `ExpandString`, `DWord`, `QWord`, `Binary`, and `MultiString`. Binary values use base64. Multi-string values use a JSON string array.
+
+### Environment Variables
+
+- `get_environment_variable`: reads a process, user, or machine environment variable
+- `set_environment_variable`: sets or clears a process, user, or machine environment variable
+- `list_environment_variables`: lists variables for a process, user, or machine target
+
+Targets are `Process`, `User`, and `Machine`.
+
+### Windows Services
+
+- `list_windows_services`: lists services, optionally filtered by name/display name
+- `get_windows_service`: gets service status and metadata
+- `start_windows_service`: starts a service and optionally waits for `Running`
+- `stop_windows_service`: stops a service and optionally waits for `Stopped`
+- `restart_windows_service`: stops and starts a service
+
+Service start/stop operations may require an elevated process depending on the service.
 
 ## Notes
 
