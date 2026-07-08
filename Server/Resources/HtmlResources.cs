@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Hosting.Server;
+using ModelContextProtocol.Extensions.Apps;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
@@ -8,16 +10,20 @@ namespace Server.Resources
     public sealed class HtmlResources
     {
         [McpServerResource(
-            UriTemplate = "ui://hello-world",
+            UriTemplate = "ui://hello-world.html",
             Name = "hello_world",
-            MimeType = "text/html;profile=mcp-app")]
+            MimeType = McpApps.HtmlMimeType)]
         [Description("A simple Hello World page")]
-        public static ResourceContents HelloWorld() =>
-            new TextResourceContents
-            {
-                Uri = "ui://hello-world",
-                MimeType = "text/html;profile=mcp-app",
-                Text = """
+        public static string HelloWorld(McpServer server) 
+        {
+            var uiCapability = McpApps.GetUiCapability(server.ClientCapabilities);
+            //if (uiCapability is null)
+            //{
+            //    // Client doesn't support MCP Apps — return plain text
+            //    return $"Hello world";
+            //}
+
+            return """
                 <!DOCTYPE html>
                 <html lang="en">
                 <head>
@@ -34,7 +40,8 @@ namespace Server.Resources
                   </div>
                 </body>
                 </html>
-                """
-            };
-} 
+                """;
+        }
+            
+    } 
 }

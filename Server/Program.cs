@@ -1,3 +1,4 @@
+using ModelContextProtocol.Extensions.Apps;
 using Server.Resources;
 using Server.Tools;
 
@@ -21,7 +22,9 @@ builder.Services
 	.WithTools<ProcessTools>()
 	.WithTools<WaitTools>()
 	.WithTools<HtmlTools>()
-	.WithResources<HtmlResources>();
+	.WithResources<HtmlResources>()
+	.WithMcpApps()
+	;
 
 var app = builder.Build();
 app.MapMcp("mcp");

@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>6ed58957-3f05-4742-8f1b-2567fe367df0</UserSecretsId>
-
+	<NoWarn>$(NoWarn);MCPEXP003</NoWarn>
 
     <!-- Set up the MCP server to be a self-contained application that does not rely on a shared framework -->
     <SelfContained>true</SelfContained>
@@ -17,7 +17,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.0" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.0.0-preview.1" />
+    <PackageReference Include="ModelContextProtocol.Extensions.Apps" Version="2.0.0-preview.1" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.9" />
   </ItemGroup>
 

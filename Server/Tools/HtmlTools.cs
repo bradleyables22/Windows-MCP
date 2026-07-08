@@ -1,5 +1,7 @@
+using ModelContextProtocol.Extensions.Apps;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Server.Tools
 {
@@ -8,7 +10,7 @@ namespace Server.Tools
     {
         [McpServerTool]
         [Description("Displays a Hello World page.")]
-        [McpMeta("ui", JsonValue = """{"resourceUri": "ui://hello-world"}""")]
+        [McpAppUi(ResourceUri = "ui://hello-world.html", Visibility = [McpUiToolVisibility.Model, McpUiToolVisibility.App])]
         public static string GetHelloWorldHtml() =>
             "Hello World widget displayed."; // text fallback for non-UI hosts
     }
