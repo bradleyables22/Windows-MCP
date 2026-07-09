@@ -250,10 +250,10 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Deletes a file permanently.")]
+		[Description("Permanently deletes a file. Prefer recycle_file when recoverability is desired.")]
 		public FileSystemMutationInfo DeleteFile(
 			[Description("File path to delete.")] string path,
-			[Description("Treat a missing file as success.")] bool missingOk = false)
+			[Description("When true, return success if the file is already missing; when false, missing files throw.")] bool missingOk = false)
 		{
 			var fullPath = RequirePath(path);
 			if (!File.Exists(fullPath))
@@ -274,10 +274,10 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Sends a file to the Windows Recycle Bin.")]
+		[Description("Sends a file to the Windows Recycle Bin instead of permanently deleting it. Use this for safer cleanup when the user may want recovery.")]
 		public FileSystemMutationInfo RecycleFile(
 			[Description("File path to recycle.")] string path,
-			[Description("Treat a missing file as success.")] bool missingOk = false)
+			[Description("When true, return success if the file is already missing; when false, missing files throw.")] bool missingOk = false)
 		{
 			var fullPath = RequirePath(path);
 			if (!File.Exists(fullPath))
@@ -298,11 +298,11 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Deletes a directory permanently.")]
+		[Description("Permanently deletes a directory. Set recursive=true to delete non-empty directories. Prefer recycle_directory when recoverability is desired.")]
 		public FileSystemMutationInfo DeleteDirectory(
 			[Description("Directory path to delete.")] string path,
 			[Description("Delete contents recursively.")] bool recursive = false,
-			[Description("Treat a missing directory as success.")] bool missingOk = false)
+			[Description("When true, return success if the directory is already missing; when false, missing directories throw.")] bool missingOk = false)
 		{
 			var fullPath = RequirePath(path);
 			if (!Directory.Exists(fullPath))
@@ -323,10 +323,10 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Sends a directory to the Windows Recycle Bin.")]
+		[Description("Sends a directory and its contents to the Windows Recycle Bin instead of permanently deleting them. Use this for safer cleanup when the user may want recovery.")]
 		public FileSystemMutationInfo RecycleDirectory(
 			[Description("Directory path to recycle.")] string path,
-			[Description("Treat a missing directory as success.")] bool missingOk = false)
+			[Description("When true, return success if the directory is already missing; when false, missing directories throw.")] bool missingOk = false)
 		{
 			var fullPath = RequirePath(path);
 			if (!Directory.Exists(fullPath))
@@ -347,10 +347,10 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Moves or renames a file.")]
+		[Description("Moves or renames a file to an exact destination path. This removes the source after the move succeeds.")]
 		public FileSystemMutationInfo MoveFile(
 			[Description("Source file path.")] string sourcePath,
-			[Description("Destination file path.")] string destinationPath,
+			[Description("Destination file path, including the final filename.")] string destinationPath,
 			[Description("Overwrite destination when it already exists.")] bool overwrite = false,
 			[Description("Create destination parent directories when they do not exist.")] bool createDirectories = true)
 		{
@@ -372,10 +372,10 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Moves or renames a directory.")]
+		[Description("Moves or renames a directory to an exact destination path. This removes the source after the move succeeds and refuses destinations inside the source tree.")]
 		public FileSystemMutationInfo MoveDirectory(
 			[Description("Source directory path.")] string sourcePath,
-			[Description("Destination directory path.")] string destinationPath,
+			[Description("Destination directory path, including the final directory name.")] string destinationPath,
 			[Description("Overwrite destination directory when it already exists.")] bool overwrite = false,
 			[Description("Create destination parent directories when they do not exist.")] bool createDirectories = true)
 		{
@@ -398,10 +398,10 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Copies a file.")]
+		[Description("Copies a file to an exact destination path while leaving the source in place.")]
 		public FileSystemMutationInfo CopyFile(
 			[Description("Source file path.")] string sourcePath,
-			[Description("Destination file path.")] string destinationPath,
+			[Description("Destination file path, including the final filename.")] string destinationPath,
 			[Description("Overwrite destination when it already exists.")] bool overwrite = false,
 			[Description("Create destination parent directories when they do not exist.")] bool createDirectories = true)
 		{
@@ -423,11 +423,11 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Copies a directory and all of its contents.")]
+		[Description("Copies a directory and all of its contents to an exact destination path while leaving the source in place. Refuses destinations inside the source tree.")]
 		public FileSystemMutationInfo CopyDirectory(
 			[Description("Source directory path.")] string sourcePath,
-			[Description("Destination directory path.")] string destinationPath,
-			[Description("Overwrite destination files when they already exist.")] bool overwrite = false,
+			[Description("Destination directory path, including the final directory name.")] string destinationPath,
+			[Description("Overwrite destination files when they already exist. Does not delete extra files already present in the destination directory.")] bool overwrite = false,
 			[Description("Create destination parent directories when they do not exist.")] bool createDirectories = true)
 		{
 			var source = RequirePath(sourcePath);
@@ -454,11 +454,11 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Deletes all contents inside a directory while leaving the directory itself in place.")]
+		[Description("Removes all contents inside a directory while leaving the directory itself in place. Set recycle=true for safer cleanup.")]
 		public FileSystemMutationInfo EmptyDirectory(
 			[Description("Directory path to empty.")] string path,
 			[Description("Send contents to Recycle Bin instead of permanently deleting them.")] bool recycle = false,
-			[Description("Treat a missing directory as success.")] bool missingOk = false)
+			[Description("When true, return success if the directory is already missing; when false, missing directories throw.")] bool missingOk = false)
 		{
 			var fullPath = RequirePath(path);
 			if (!Directory.Exists(fullPath))
@@ -502,13 +502,13 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Pastes a file system item into a destination directory by copying or moving it and preserving its name unless a new name is provided.")]
+		[Description("Copies or moves a file system item into a destination directory, like paste. By default it copies and preserves the source name; set move=true to cut/paste, and set newName to rename at the destination.")]
 		public FileSystemMutationInfo PasteFileSystemItem(
 			[Description("Source file or directory path.")] string sourcePath,
 			[Description("Destination directory path.")] string destinationDirectory,
-			[Description("Move instead of copying.")] bool move = false,
-			[Description("Overwrite destination when it already exists.")] bool overwrite = false,
-			[Description("Optional new file or directory name at the destination.")] string? newName = null,
+			[Description("When false, copy/paste and leave the source in place. When true, move/cut-paste and remove the source after success.")] bool move = false,
+			[Description("Overwrite the destination item when it already exists.")] bool overwrite = false,
+			[Description("Optional new file or directory name at the destination. Must be a name only, not a path.")] string? newName = null,
 			[Description("Create destination directory when it does not exist.")] bool createDirectories = true)
 		{
 			var source = RequirePath(sourcePath);

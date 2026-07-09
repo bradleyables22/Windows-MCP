@@ -18,13 +18,13 @@ namespace Server.Tools
 	public sealed class CommandTools
 	{
 		[McpServerTool]
-		[Description("Runs an executable or command and captures stdout, stderr, exit code, elapsed time, and timeout state.")]
+		[Description("Runs a specific executable directly with optional arguments and captures stdout, stderr, exit code, elapsed time, and timeout state. Use run_shell_command for shell syntax such as pipes, redirection, built-ins, or chained commands.")]
 		public CommandResult RunCommand(
-			[Description("Executable or command to run.")] string fileName,
-			[Description("Optional command-line arguments.")] string? arguments = null,
-			[Description("Optional working directory.")] string? workingDirectory = null,
-			[Description("Maximum run time in milliseconds.")] int timeoutMilliseconds = 60000,
-			[Description("Optional environment variables to add or override.")] Dictionary<string, string>? environmentVariables = null)
+			[Description("Executable path or command name to run directly, for example notepad.exe or C:\\Tools\\app.exe.")] string fileName,
+			[Description("Optional raw command-line argument string passed to the executable.")] string? arguments = null,
+			[Description("Optional working directory. Relative paths are resolved by the server process.")] string? workingDirectory = null,
+			[Description("Maximum run time in milliseconds. Use 0 for no timeout. Timed-out processes are killed with their process tree.")] int timeoutMilliseconds = 60000,
+			[Description("Optional environment variables to add or override for this process only.")] Dictionary<string, string>? environmentVariables = null)
 		{
 			if (string.IsNullOrWhiteSpace(fileName))
 			{
@@ -41,12 +41,12 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Runs a command line through cmd.exe /d /s /c and captures stdout, stderr, exit code, elapsed time, and timeout state.")]
+		[Description("Runs a full command line through cmd.exe /d /s /c and captures stdout, stderr, exit code, elapsed time, and timeout state. Use this for cmd built-ins, pipes, redirection, and chained commands.")]
 		public CommandResult RunShellCommand(
-			[Description("Command line to pass to cmd.exe.")] string commandLine,
-			[Description("Optional working directory.")] string? workingDirectory = null,
-			[Description("Maximum run time in milliseconds.")] int timeoutMilliseconds = 60000,
-			[Description("Optional environment variables to add or override.")] Dictionary<string, string>? environmentVariables = null)
+			[Description("Command line to pass as one string to cmd.exe /d /s /c.")] string commandLine,
+			[Description("Optional working directory. Relative paths are resolved by the server process.")] string? workingDirectory = null,
+			[Description("Maximum run time in milliseconds. Use 0 for no timeout. Timed-out processes are killed with their process tree.")] int timeoutMilliseconds = 60000,
+			[Description("Optional environment variables to add or override for this process only.")] Dictionary<string, string>? environmentVariables = null)
 		{
 			if (string.IsNullOrWhiteSpace(commandLine))
 			{
@@ -63,13 +63,13 @@ namespace Server.Tools
 		}
 
 		[McpServerTool]
-		[Description("Runs a PowerShell script or command and captures stdout, stderr, exit code, elapsed time, and timeout state.")]
+		[Description("Runs a PowerShell script non-interactively and captures stdout, stderr, exit code, elapsed time, and timeout state. Use this for PowerShell cmdlets, objects, and Windows administration scripts.")]
 		public CommandResult RunPowerShell(
 			[Description("PowerShell script or command text.")] string script,
-			[Description("Optional working directory.")] string? workingDirectory = null,
-			[Description("Maximum run time in milliseconds.")] int timeoutMilliseconds = 60000,
-			[Description("Use pwsh.exe instead of Windows PowerShell when true.")] bool usePwsh = false,
-			[Description("Optional environment variables to add or override.")] Dictionary<string, string>? environmentVariables = null)
+			[Description("Optional working directory. Relative paths are resolved by the server process.")] string? workingDirectory = null,
+			[Description("Maximum run time in milliseconds. Use 0 for no timeout. Timed-out processes are killed with their process tree.")] int timeoutMilliseconds = 60000,
+			[Description("Use pwsh.exe instead of Windows PowerShell 5.1 when true.")] bool usePwsh = false,
+			[Description("Optional environment variables to add or override for this process only.")] Dictionary<string, string>? environmentVariables = null)
 		{
 			if (string.IsNullOrWhiteSpace(script))
 			{

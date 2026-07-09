@@ -40,6 +40,16 @@ For local development, you can run the project directly:
 dotnet run --project Server/Server.csproj --launch-profile stdio
 ```
 
+## AI Client Guidance
+
+The MCP tool descriptions are written so an AI client can choose tools directly from the schema. A few usage patterns are worth keeping explicit:
+
+- Prefer `list_workflow_tools` before creating or repairing workflow JSON. Use the returned snake_case tool names and parameter schemas for workflow steps.
+- Use `run_workflow_json` to test an inline workflow before saving it, then use `save_workflow` when the JSON is ready to persist.
+- For screen recording, always keep the `recordingId` returned by `start_screen_recording`. Poll with `get_screen_recording_status`, renew active recordings with `renew_screen_recording` when needed, and call `stop_screen_recording` to finalize early. If a recording auto-stops first, `stop_screen_recording` returns the saved final status.
+- Prefer `recycle_file`, `recycle_directory`, or `empty_directory` with `recycle=true` for recoverable cleanup. Use permanent delete tools only when that is the intended outcome.
+- Use `run_command` for a specific executable, `run_shell_command` for `cmd.exe` syntax such as pipes or redirection, and `run_power_shell` for PowerShell cmdlets/scripts.
+
 ## Build
 
 The project targets `net10.0-windows` and publishes self-contained single-file Windows builds for:
