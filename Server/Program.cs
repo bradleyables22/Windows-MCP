@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Server.ScreenRecording;
 using Server.Tools;
 using Server.Workflows;
 
@@ -16,6 +17,8 @@ builder.Logging.AddConsole(options =>
 builder.Services.AddSingleton<WorkflowStore>();
 builder.Services.AddSingleton<WorkflowToolDispatcher>();
 builder.Services.AddSingleton<WorkflowRunner>();
+builder.Services.AddSingleton<ScreenRecordingManager>();
+builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<ScreenRecordingManager>());
 
 // Add the MCP services: the transport to use (stdio) and the tools to register.
 builder.Services
@@ -24,6 +27,7 @@ builder.Services
 	.WithTools<MouseTools>()
 	.WithTools<KeyboardTools>()
 	.WithTools<ScreenTools>()
+	.WithTools<ScreenRecordingTools>()
 	.WithTools<WindowTools>()
 	.WithTools<ClipboardTools>()
 	.WithTools<ProcessTools>()

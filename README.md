@@ -7,6 +7,7 @@ It exposes tools for:
 - Mouse movement, clicking, dragging, and scrolling
 - Keyboard text entry, key presses, and hotkeys
 - Screenshots, monitor metadata, and virtual-screen bounds
+- Leased background screen recording to H.264 MP4 files through Windows Media Foundation
 - Window discovery, focus, movement, resizing, snapping, minimize, maximize, and close
 - Clipboard text read, write, and clear
 - Process discovery, launch, focus, shell open, and graceful close
@@ -178,6 +179,32 @@ Desktop workflow runs are executed one at a time. This avoids overlapping mouse,
 The workflow layer is built on top of the existing tool classes rather than a separate automation API. The dispatcher reflects over the existing MCP tool methods and lets workflow steps call those same tools by name.
 
 The workflow runner does not write unsolicited completion messages to stdout, because stdout is reserved for MCP JSON-RPC traffic. Completion is returned directly from `run_workflow` or `run_workflow_json`, and high-level run status is also logged to stderr.
+
+## Screen Recording
+
+Screen recordings are background jobs with built-in safety limits. They write H.264 MP4 files through Windows Media Foundation under:
+
+```text
+%LOCALAPPDATA%\WindowsMCP\recordings
+```
+
+Use `get_screen_recording_storage` to ask the server for the exact folder at runtime.
+
+Recording tools:
+
+- `get_screen_recording_storage`: returns the recording storage folder
+- `start_screen_recording`: starts a leased recording and returns a `recordingId`
+- `renew_screen_recording`: extends an active recording lease, bounded by the hard maximum duration
+- `stop_screen_recording`: stops a recording and finalizes the MP4 file
+- `get_screen_recording_status`: reads current or final recording status
+- `list_screen_recordings`: lists known recording states, newest first
+- `delete_screen_recording`: deletes a stopped recording state, optionally deleting output files
+
+`start_screen_recording` defaults to 5 FPS, a 5-minute maximum duration, a 512 MiB output limit, cursor capture enabled, a 4 Mbps H.264 video bitrate, and a self-contained `.mp4` output file. Region, FPS, duration, lease, size limit, output path, and video bitrate are configurable.
+
+Recordings are written to `*.partial.mp4` while active and moved to the final `.mp4` path only after they are stopped cleanly. If the server starts and finds an active recording state from a previous process, it marks it as `interrupted` and does not resume recording.
+
+The recorder also attempts to stop active recordings during server shutdown, Windows session ending, and system suspend events. The hard duration, lease expiration, and max-size limit are the primary safety net for abandoned AI calls.
 
 ## System Helpers
 

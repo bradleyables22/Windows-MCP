@@ -26,6 +26,15 @@ namespace Server.InteropServices
 		bool CursorIncluded,
 		DateTimeOffset CapturedAt);
 
+	public sealed record ScreenFrameResult(
+		byte[] Bgra32Bytes,
+		int Width,
+		int Height,
+		int Stride,
+		ScreenRectangle Bounds,
+		bool CursorIncluded,
+		DateTimeOffset CapturedAt);
+
 	/// <summary>
 	/// Provides native Windows monitor discovery and screen capture operations.
 	/// </summary>
@@ -33,6 +42,7 @@ namespace Server.InteropServices
 	public static class ScreenControl
 	{
 		private const string PngMimeType = "image/png";
+		private const string JpegMimeType = "image/jpeg";
 
 		internal static class Imports
 		{
@@ -196,20 +206,104 @@ namespace Server.InteropServices
 
 		public static ScreenCaptureResult CaptureRectangle(ScreenRectangle bounds, bool includeCursor = true)
 		{
+			return CaptureRectangle(
+				bounds,
+				includeCursor,
+				PngMimeType,
+				(bitmap, stream) => bitmap.Save(stream, ImageFormat.Png));
+		}
+
+		public static ScreenCaptureResult CaptureRectangleJpeg(
+			ScreenRectangle bounds,
+			bool includeCursor = true,
+			int quality = 75)
+		{
+			if (quality is < 1 or > 100)
+			{
+				throw new ArgumentOutOfRangeException(nameof(quality), quality, "JPEG quality must be between 1 and 100.");
+			}
+
+			return CaptureRectangle(
+				bounds,
+				includeCursor,
+				JpegMimeType,
+				(bitmap, stream) => SaveJpeg(bitmap, stream, quality));
+		}
+
+		public static ScreenFrameResult CaptureRectangleBgra32(ScreenRectangle bounds, bool includeCursor = true)
+		{
+			using var bitmap = CaptureBitmap(bounds, includeCursor, out var captureBounds, out var cursorIncluded);
+			var stride = captureBounds.Width * 4;
+			var bytes = new byte[stride * captureBounds.Height];
+			var bitmapData = bitmap.LockBits(
+				new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+				ImageLockMode.ReadOnly,
+				PixelFormat.Format32bppRgb);
+
+			try
+			{
+				for (var row = 0; row < captureBounds.Height; row++)
+				{
+					var sourceRow = captureBounds.Height - 1 - row;
+					var source = bitmapData.Scan0 + (sourceRow * bitmapData.Stride);
+					Marshal.Copy(source, bytes, row * stride, stride);
+				}
+			}
+			finally
+			{
+				bitmap.UnlockBits(bitmapData);
+			}
+
+			return new ScreenFrameResult(
+				bytes,
+				captureBounds.Width,
+				captureBounds.Height,
+				stride,
+				captureBounds,
+				cursorIncluded,
+				DateTimeOffset.UtcNow);
+		}
+
+		private static ScreenCaptureResult CaptureRectangle(
+			ScreenRectangle bounds,
+			bool includeCursor,
+			string mimeType,
+			Action<Bitmap, Stream> save)
+		{
+			using var bitmap = CaptureBitmap(bounds, includeCursor, out var captureBounds, out var cursorIncluded);
+			using var stream = new MemoryStream();
+			save(bitmap, stream);
+
+			return new ScreenCaptureResult(
+				stream.ToArray(),
+				mimeType,
+				captureBounds.Width,
+				captureBounds.Height,
+				captureBounds,
+				cursorIncluded,
+				DateTimeOffset.UtcNow);
+		}
+
+		private static Bitmap CaptureBitmap(
+			ScreenRectangle bounds,
+			bool includeCursor,
+			out ScreenRectangle captureBounds,
+			out bool cursorIncluded)
+		{
 			if (bounds.IsEmpty)
 			{
 				throw new ArgumentOutOfRangeException(nameof(bounds), "Capture bounds must have positive width and height.");
 			}
 
 			var virtualScreen = GetVirtualScreenBounds();
-			var captureBounds = bounds.Intersect(virtualScreen);
+			captureBounds = bounds.Intersect(virtualScreen);
 
 			if (captureBounds.IsEmpty)
 			{
 				throw new ArgumentOutOfRangeException(nameof(bounds), "Capture bounds must overlap the virtual screen.");
 			}
 
-			using var bitmap = new Bitmap(captureBounds.Width, captureBounds.Height, PixelFormat.Format32bppArgb);
+			var bitmap = new Bitmap(captureBounds.Width, captureBounds.Height, PixelFormat.Format32bppRgb);
 			using var graphics = Graphics.FromImage(bitmap);
 
 			graphics.CopyFromScreen(
@@ -220,19 +314,20 @@ namespace Server.InteropServices
 				new Size(captureBounds.Width, captureBounds.Height),
 				CopyPixelOperation.SourceCopy);
 
-			var cursorIncluded = includeCursor && DrawCursor(graphics, captureBounds);
+			cursorIncluded = includeCursor && DrawCursor(graphics, captureBounds);
+			return bitmap;
+		}
 
-			using var stream = new MemoryStream();
-			bitmap.Save(stream, ImageFormat.Png);
+		private static void SaveJpeg(Bitmap bitmap, Stream stream, int quality)
+		{
+			var encoder = ImageCodecInfo
+				.GetImageEncoders()
+				.FirstOrDefault(codec => string.Equals(codec.MimeType, JpegMimeType, StringComparison.OrdinalIgnoreCase))
+				?? throw new InvalidOperationException("JPEG encoder was not found.");
 
-			return new ScreenCaptureResult(
-				stream.ToArray(),
-				PngMimeType,
-				captureBounds.Width,
-				captureBounds.Height,
-				captureBounds,
-				cursorIncluded,
-				DateTimeOffset.UtcNow);
+			using var parameters = new EncoderParameters(1);
+			parameters.Param[0] = new EncoderParameter(Encoder.Quality, quality);
+			bitmap.Save(stream, encoder, parameters);
 		}
 
 		public static ScreenCaptureResult CaptureForegroundWindow(bool includeCursor = true)

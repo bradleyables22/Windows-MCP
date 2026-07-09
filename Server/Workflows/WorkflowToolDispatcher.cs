@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
 using Server.Tools;
 using System.Reflection;
@@ -25,6 +26,7 @@ namespace Server.Workflows
 			typeof(MouseTools),
 			typeof(KeyboardTools),
 			typeof(ScreenTools),
+			typeof(ScreenRecordingTools),
 			typeof(WindowTools),
 			typeof(ClipboardTools),
 			typeof(ProcessTools),
@@ -38,9 +40,9 @@ namespace Server.Workflows
 
 		private readonly IReadOnlyDictionary<string, ToolMethodInvoker> tools;
 
-		public WorkflowToolDispatcher()
+		public WorkflowToolDispatcher(IServiceProvider serviceProvider)
 		{
-			tools = BuildToolMap();
+			tools = BuildToolMap(serviceProvider);
 		}
 
 		public IReadOnlyList<WorkflowAvailableToolInfo> ListTools()
@@ -86,13 +88,13 @@ namespace Server.Workflows
 			}
 		}
 
-		private static IReadOnlyDictionary<string, ToolMethodInvoker> BuildToolMap()
+		private static IReadOnlyDictionary<string, ToolMethodInvoker> BuildToolMap(IServiceProvider serviceProvider)
 		{
 			var map = new Dictionary<string, ToolMethodInvoker>(StringComparer.OrdinalIgnoreCase);
 
 			foreach (var type in ToolTypes)
 			{
-				var instance = Activator.CreateInstance(type)
+				var instance = ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, type)
 					?? throw new InvalidOperationException($"Could not create tool instance for {type.FullName}.");
 
 				var methods = type
