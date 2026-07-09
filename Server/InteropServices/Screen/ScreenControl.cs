@@ -244,8 +244,7 @@ namespace Server.InteropServices
 			{
 				for (var row = 0; row < captureBounds.Height; row++)
 				{
-					var sourceRow = captureBounds.Height - 1 - row;
-					var source = bitmapData.Scan0 + (sourceRow * bitmapData.Stride);
+					var source = bitmapData.Scan0 + (row * bitmapData.Stride);
 					Marshal.Copy(source, bytes, row * stride, stride);
 				}
 			}
